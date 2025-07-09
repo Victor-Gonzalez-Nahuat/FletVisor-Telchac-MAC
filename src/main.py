@@ -13,7 +13,7 @@ def main(page: ft.Page):
 
     todos_los_recibos = []
     pagina_actual = 0
-    tamanio_pagina = 11
+    tamanio_pagina = 10
 
 
     zona_horaria = pytz.timezone("America/Merida")
@@ -35,6 +35,12 @@ def main(page: ft.Page):
     txt_fecha_hasta = ft.TextField(label="Hasta", read_only=True, width=150,
                                    value=hoy.strftime("%d-%m-%Y"), bgcolor=ft.Colors.WHITE)
     txt_fecha_hasta.data = hoy_str
+
+    btn_primera = ft.ElevatedButton("⏮ Primera", on_click=lambda e: ir_a_primera_pagina())
+    btn_anterior = ft.ElevatedButton("⬅️ Anterior", on_click=lambda e: cambiar_pagina(-1))
+    btn_siguiente = ft.ElevatedButton("Siguiente ➡️", on_click=lambda e: cambiar_pagina(1))
+    btn_ultima = ft.ElevatedButton("Última ⏭", on_click=lambda e: ir_a_ultima_pagina())
+
 
     def actualizar_fecha(txt, nueva_fecha):
         txt.data = nueva_fecha
@@ -118,6 +124,17 @@ def main(page: ft.Page):
         nonlocal pagina_actual
         pagina_actual += delta
         mostrar_pagina()
+
+    def ir_a_primera_pagina():
+        nonlocal pagina_actual
+        pagina_actual = 0
+        mostrar_pagina()
+
+    def ir_a_ultima_pagina():
+        nonlocal pagina_actual, todos_los_recibos, tamanio_pagina
+        total_paginas = (len(todos_los_recibos) - 1) // tamanio_pagina
+        pagina_actual = total_paginas
+        mostrar_pagina()
         
     def mostrar_resultados(data):
         nonlocal todos_los_recibos, pagina_actual
@@ -126,7 +143,13 @@ def main(page: ft.Page):
         mostrar_pagina()
 
     def mostrar_pagina():
-        nonlocal pagina_actual, tamanio_pagina, todos_los_recibos
+
+        total_paginas = (len(todos_los_recibos) - 1) // tamanio_pagina
+
+        btn_primera.disabled = pagina_actual == 0
+        btn_anterior.disabled = pagina_actual == 0
+        btn_siguiente.disabled = pagina_actual >= total_paginas
+        btn_ultima.disabled = pagina_actual >= total_paginas
 
         inicio = pagina_actual * tamanio_pagina
         fin = inicio + tamanio_pagina
@@ -161,13 +184,14 @@ def main(page: ft.Page):
             )
             filas.append(fila)
 
-        botones_navegacion = []
+        botones_navegacion = [
+            btn_primera,
+            btn_anterior,
+            btn_siguiente,
+            btn_ultima
+        ]
 
-        if pagina_actual > 0:
-            botones_navegacion.append(ft.ElevatedButton("⬅️ Anteriores", on_click=lambda e: cambiar_pagina(-1)))
-
-        if fin < len(todos_los_recibos):
-            botones_navegacion.append(ft.ElevatedButton("Siguientes ➡️", on_click=lambda e: cambiar_pagina(1)))
+        etiqueta_pagina = ft.Text(f"Página {pagina_actual + 1} de {total_paginas + 1}", size=14, italic=True)
 
         resultado_card.content = ft.Column([
             ft.DataTable(
@@ -178,8 +202,10 @@ def main(page: ft.Page):
                 divider_thickness=0.8,
                 show_checkbox_column=False
             ),
+            etiqueta_pagina,
             ft.Row(botones_navegacion, alignment=ft.MainAxisAlignment.CENTER)
         ], scroll=ft.ScrollMode.ALWAYS)
+
 
         page.update()
 
@@ -293,12 +319,17 @@ def main(page: ft.Page):
                 suma_total_descuento = sum(float(cuenta.get("total_descuento", 0.0)) for cuenta in data)
 
                 # Crear el título dinámico con fechas y totales
-                desplegar_dialog.title = ft.Text(
-                    f"Totales del {desde_legible} al {hasta_legible}  |  "
-                    f"Neto: ${suma_total_neto:,.2f}  |  "
-                    f"Descuentos: ${suma_total_descuento:,.2f}",
-                    size=20,
-                    weight=ft.FontWeight.BOLD
+                desplegar_dialog.title = ft.Row(
+                    [
+                        ft.Text(
+                            f"Totales del {desde_legible} al {hasta_legible}  |  "
+                            f"Neto: ${suma_total_neto:,.2f}  |  "
+                            f"Descuentos: ${suma_total_descuento:,.2f}",
+                            size=20,
+                            weight=ft.FontWeight.BOLD
+                        ),
+                        ft.IconButton(icon=ft.Icons.CLOSE_ROUNDED,bgcolor=ft.Colors.RED, icon_color=ft.Colors.WHITE, on_click=lambda e: page.close(desplegar_dialog))
+                    ]
                 )
 
                 # Asignar contenido (tabla)
