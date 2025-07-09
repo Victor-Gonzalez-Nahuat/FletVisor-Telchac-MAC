@@ -1,0 +1,4 @@
+flet==0.27.6
+pymysql
+pandas
+requests
