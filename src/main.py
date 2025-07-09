@@ -284,17 +284,37 @@ def main(page: ft.Page):
                     show_checkbox_column=False,
                 )
 
+                # Formato de fechas legibles
+                desde_legible = desde_date.strftime("%d/%m/%Y")
+                hasta_legible = hasta_date.strftime("%d/%m/%Y")
+
+                # Calcular los totales generales sumando cada cuenta
+                suma_total_neto = sum(float(cuenta.get("total_neto", 0.0)) for cuenta in data)
+                suma_total_descuento = sum(float(cuenta.get("total_descuento", 0.0)) for cuenta in data)
+
+                # Crear el título dinámico con fechas y totales
+                desplegar_dialog.title = ft.Text(
+                    f"Totales del {desde_legible} al {hasta_legible}  |  "
+                    f"Neto: ${suma_total_neto:,.2f}  |  "
+                    f"Descuentos: ${suma_total_descuento:,.2f}",
+                    size=20,
+                    weight=ft.FontWeight.BOLD
+                )
+
+                # Asignar contenido (tabla)
                 desplegar_dialog.content = ft.Container(
                     content=ft.Column(
                         [
                             tabla
                         ], scroll=ft.ScrollMode.AUTO
                     ),
-                    padding=0,
+                    padding=10,
                     width=800,
                     height=400
                 )
+
                 page.open(desplegar_dialog)
+
 
 
             else:
