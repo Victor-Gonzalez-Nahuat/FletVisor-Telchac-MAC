@@ -39,6 +39,7 @@ def main(page: ft.Page):
     def actualizar_fecha(txt, nueva_fecha):
         txt.data = nueva_fecha
         txt.value = datetime.fromisoformat(nueva_fecha).strftime("%d-%m-%Y")
+        buscar_producto(contribuyente_input.value)
         page.update()
 
     date_picker_desde = ft.DatePicker(on_change=lambda e: actualizar_fecha(txt_fecha_desde, e.data), value=date.today(), expand=1)
@@ -106,11 +107,12 @@ def main(page: ft.Page):
     totales_card = ft.Container()
     loader = ft.ProgressRing(visible=False, color=ft.Colors.ORANGE, stroke_width=4)
 
-    def formatear_fecha_yymmdd(f):
+    def formatear_fecha_mejor(fecha_str):
         try:
-            return datetime.datetime.strptime(f, "%y%m%d").strftime("%d-%m-%Y")
-        except:
-            return f
+            fecha = datetime.strptime(fecha_str, "%y%m%d")  # convierte a objeto datetime
+            return fecha.strftime("%d/%m/%Y")  # convierte a string en formato DD/MM/YYYY
+        except Exception as e:
+            return f"Formato inválido: {fecha_str}"  # por si acaso
         
     def cambiar_pagina(delta):
         nonlocal pagina_actual
@@ -152,7 +154,7 @@ def main(page: ft.Page):
                     ft.DataCell(ft.Text(f"{r['recibo']} {estado}", color=color_texto)),
                     ft.DataCell(ft.Text(r['contribuyente'], color=color_texto, size=10)),
                     ft.DataCell(ft.Text(r['concepto'], color=color_texto, size=10)),
-                    ft.DataCell(ft.Text(formatear_fecha_yymmdd(r['fecha']), color=color_texto)),
+                    ft.DataCell(ft.Text(formatear_fecha_mejor(r['fecha']), color=color_texto)),
                     ft.DataCell(ft.Text(f"${float(r['neto']):,.2f}", color=ft.Colors.GREEN_800 if not es_cancelado else color_texto)),
                     ft.DataCell(ft.Text(f"${float(r['descuento']):,.2f}", color=color_texto)),
                 ]
@@ -255,19 +257,45 @@ def main(page: ft.Page):
                     page.open(desplegar_dialog)
                     return
 
-                items = []
+                columnas_tabla = [
+                    ft.DataColumn(label=ft.Text("Cuenta", weight=ft.FontWeight.BOLD, expand=True)),
+                    ft.DataColumn(label=ft.Text("Total Neto", weight=ft.FontWeight.BOLD, expand=True)),
+                    ft.DataColumn(label=ft.Text("Total Descuento", weight=ft.FontWeight.BOLD, expand=True)),
+                ]
+
+                filas_tabla = []
                 for cuenta_data in data:
                     cuenta = cuenta_data.get("cuenta", "Sin cuenta")
                     total_neto = cuenta_data.get("total_neto", 0.0)
                     total_descuento = cuenta_data.get("total_descuento", 0.0)
 
-                    items.append(ft.Text(f"Cuenta: {cuenta}", size=18, weight=ft.FontWeight.BOLD))
-                    items.append(ft.Text(f"  Total Neto: ${total_neto:,.2f}", size=16))
-                    items.append(ft.Text(f"  Total Descuento: ${total_descuento:,.2f}", size=16))
-                    items.append(ft.Divider())  # Línea divisoria entre cuentas
+                    fila = ft.DataRow(cells=[
+                        ft.DataCell(ft.Text(cuenta)),
+                        ft.DataCell(ft.Text(f"${total_neto:,.2f}", color=ft.Colors.GREEN_700)),
+                        ft.DataCell(ft.Text(f"${total_descuento:,.2f}")),
+                    ])
+                    filas_tabla.append(fila)
 
-                desplegar_dialog.content = ft.Column(items, height=400, scroll=ft.ScrollMode.ALWAYS)
-                page.open(desplegar_dialog)  # ← Abrir aquí, después de llenar el contenido
+                tabla = ft.DataTable(
+                    columns=columnas_tabla,
+                    rows=filas_tabla,
+                    heading_row_color=ft.Colors.AMBER_100,
+                    divider_thickness=0.6,
+                    show_checkbox_column=False,
+                )
+
+                desplegar_dialog.content = ft.Container(
+                    content=ft.Column(
+                        [
+                            tabla
+                        ], scroll=ft.ScrollMode.AUTO
+                    ),
+                    padding=0,
+                    width=800,
+                    height=400
+                )
+                page.open(desplegar_dialog)
+
 
             else:
                 desplegar_dialog.content = ft.Text(f"Error al obtener datos: {response.status_code}")
