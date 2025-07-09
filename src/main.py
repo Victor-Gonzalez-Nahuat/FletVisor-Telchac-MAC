@@ -13,7 +13,7 @@ def main(page: ft.Page):
 
     todos_los_recibos = []
     pagina_actual = 0
-    tamanio_pagina = 10
+    tamanio_pagina = 0
 
 
     zona_horaria = pytz.timezone("America/Merida")
@@ -41,12 +41,24 @@ def main(page: ft.Page):
     btn_siguiente = ft.ElevatedButton("Siguiente ➡️", on_click=lambda e: cambiar_pagina(1))
     btn_ultima = ft.ElevatedButton("Última ⏭", on_click=lambda e: ir_a_ultima_pagina())
 
+    def ajustar_tamanio_pagina(e):
+        nonlocal tamanio_pagina
+        alto_disponible = page.window.height or page.height  # fallback si window_height no está disponible
+        alto_aproximado_encabezado = 400  # estima lo que ocupa tu encabezado y controles
+        alto_por_fila = 30  # más o menos lo que ocupa una fila con padding
+
+        filas_visibles = max(5, int((alto_disponible - alto_aproximado_encabezado) / alto_por_fila))
+        tamanio_pagina = filas_visibles
+        mostrar_pagina()
 
     def actualizar_fecha(txt, nueva_fecha):
         txt.data = nueva_fecha
         txt.value = datetime.fromisoformat(nueva_fecha).strftime("%d-%m-%Y")
         buscar_producto(contribuyente_input.value)
         page.update()
+    
+    page.on_resized = ajustar_tamanio_pagina
+
 
     date_picker_desde = ft.DatePicker(on_change=lambda e: actualizar_fecha(txt_fecha_desde, e.data), value=date.today(), expand=1)
     date_picker_hasta = ft.DatePicker(on_change=lambda e: actualizar_fecha(txt_fecha_hasta, e.data), value=date.today(), expand=1)
@@ -392,5 +404,7 @@ def main(page: ft.Page):
         )
 
     buscar_producto("")
+    ajustar_tamanio_pagina(None)
+
 
 ft.app(target=main)
